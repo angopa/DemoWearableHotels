@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.app.RemoteInput;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -24,6 +25,14 @@ public class DetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_detail);
 
         String city = getIntent().getStringExtra("city");
+
+        if(city == null){
+            Bundle remoteInput = RemoteInput.getResultsFromIntent(getIntent());
+            if (remoteInput != null){
+                city = remoteInput.getCharSequence(MainActivity.EXTRA_VOICE_REPLY).toString();
+            }
+        }
+
         setTitle("Landon Hotel"+", "+city);
         hotel = DataProvider.hotelMap.get(city);
 
