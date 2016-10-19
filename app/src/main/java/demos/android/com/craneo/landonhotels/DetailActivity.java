@@ -25,7 +25,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,7 +38,8 @@ public class DetailActivity extends AppCompatActivity implements OnMapReadyCallb
     private static final int ZOOM_VALUE = 15;
     private Hotel hotel;
 
-    GoogleMap mMap;
+    private GoogleMap mMap;
+    private Marker marker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +105,85 @@ public class DetailActivity extends AppCompatActivity implements OnMapReadyCallb
         descriptionText.setText(hotel.getDescription()+"\n");
     }
 
+
+
+    @Override
+    public void onMapReady(GoogleMap googleMap){
+        mMap = googleMap;
+        try {
+            geoLocale();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (mMap != null){
+            mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
+                @Override
+                public View getInfoWindow(Marker marker) {
+                    return null;
+                }
+
+                @Override
+                public View getInfoContents(Marker marker) {
+                    int backgroundId = getResources().getIdentifier(
+                            hotel.getImage(), "drawable", getPackageName());
+                    Bitmap background = BitmapFactory.decodeResource(
+                            getResources(),backgroundId);
+
+                    View v = getLayoutInflater().inflate(R.layout.info_window, null);
+                    ImageView imageView = (ImageView) v.findViewById(R.id.imageView1);
+                    TextView tvHotelName = (TextView) v.findViewById(R.id.tvHotelName);
+                    TextView tvCity = (TextView) v.findViewById(R.id.tvCity);
+
+                    imageView.setImageBitmap(background);
+                    tvHotelName.setText(hotel.getNeighborhood());
+                    tvCity.setText(hotel.getCity());
+                    return v;
+                }
+            });
+        }
+    }
+
+    public void geoLocale() throws IOException{
+        Geocoder geocoder = new Geocoder(this);
+        List<Address> list = geocoder.getFromLocationName(hotel.getAddress().toString(),1);
+
+        if (list.size()>0){
+            Address add = list.get(0);
+            double lat = add.getLatitude();
+            double lng = add.getLongitude();
+
+            gotoLocation(lat, lng, ZOOM_VALUE);
+
+            addMarker(add, lat, lng);
+        }
+
+    }
+
+    private void gotoLocation(double lat, double lng, int zoomValue) {
+        LatLng latLng = new LatLng(lat, lng);
+        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLng, zoomValue);
+        mMap.moveCamera(update);
+    }
+
+    private void addMarker(Address add, double lat, double lng){
+        MarkerOptions options = new MarkerOptions()
+                .title(add.getLocality())
+                .position(new LatLng(lat, lng))
+                .draggable(true)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+        String country = add.getCountryName();
+        if (country.length() > 0){
+            options.snippet(country);
+        }
+        if (marker != null){
+            marker.remove();
+        }
+        marker = mMap.addMarker(options);
+
+    }
+
+
     public void sendNotification(View view){
         String text = "Visit Landon Hotel in "+ hotel.getCity()+"!\n\n"+hotel.getDescription();
         NotificationCompat.BigTextStyle bigTextStyle =
@@ -137,11 +220,11 @@ public class DetailActivity extends AppCompatActivity implements OnMapReadyCallb
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(this)
-                .setContentTitle(getText(R.string.app_name))
-                .setStyle(bigTextStyle)
-                .setSmallIcon(R.drawable.ic_notify)
-                .addAction(R.drawable.ic_action_map, "Map", mapPendingIntent)
-                .extend(extender);
+                        .setContentTitle(getText(R.string.app_name))
+                        .setStyle(bigTextStyle)
+                        .setSmallIcon(R.drawable.ic_notify)
+                        .addAction(R.drawable.ic_action_map, "Map", mapPendingIntent)
+                        .extend(extender);
 
         int notificationId = 1;
         NotificationManagerCompat nmc =
@@ -149,35 +232,5 @@ public class DetailActivity extends AppCompatActivity implements OnMapReadyCallb
         nmc.notify(notificationId, builder.build());
 
 
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap){
-        mMap = googleMap;
-        try {
-            geoLocale();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void geoLocale() throws IOException{
-        Geocoder geocoder = new Geocoder(this);
-        List<Address> list = geocoder.getFromLocationName(hotel.getAddress().toString(),1);
-
-        if (list.size()>0){
-            Address add = list.get(0);
-            double lat = add.getLatitude();
-            double lng = add.getLongitude();
-
-            gotoLocation(lat, lng, ZOOM_VALUE);
-        }
-
-    }
-
-    private void gotoLocation(double lat, double lng, int zoomValue) {
-        LatLng latLng = new LatLng(lat, lng);
-        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLng, zoomValue);
-        mMap.moveCamera(update);
     }
 }
